@@ -1,48 +1,66 @@
-# Object Detection for Underwater Fish Detection: OBB vs HBB Comparison and Active Learning
+# Precise and Efficient Fish Detection Using Oriented Bounding Boxes and Active Learning
 
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.6-red.svg)](https://pytorch.org/)
 [![Ultralytics](https://img.shields.io/badge/Ultralytics-8.3-purple.svg)](https://github.com/ultralytics/ultralytics)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-This repository contains the code and experiments for my thesis on **object detection in underwater environments**, specifically comparing Oriented Bounding Boxes (OBB) and Horizontal Bounding Boxes (HBB) detection methods, and implementing Active Learning strategies for efficient data labelling.
+This repository contains the implementation and experiments for my MSc thesis on automated underwater fish detection. The research addresses two key challenges in aquatic ecosystem monitoring: **geometric imprecision** of standard detection methods for elongated, variably-oriented fish, and the **prohibitive cost** of manual annotation required to train deep learning models.
+
+<p align="center">
+  <img src="assets/obb_vs_hbb.png" alt="OBB vs HBB Comparison" width="600"/>
+</p>
 
 ## 📋 Table of Contents
 
-- [Overview](#overview)
+- [Abstract](#abstract)
+- [Key Findings](#key-findings)
 - [Repository Structure](#repository-structure)
 - [Installation](#installation)
+- [Datasets](#datasets)
 - [Experiments](#experiments)
-  - [OBB vs HBB Comparison](#1-obb-vs-hbb-comparison)
-  - [Active Learning](#2-active-learning)
 - [Results](#results)
 - [Usage](#usage)
 - [Citation](#citation)
 - [Acknowledgements](#acknowledgements)
 
-## 🔍 Overview
+## 📝 Abstract
 
-Underwater fish detection presents unique challenges due to varying orientations of fish, complex backgrounds, and limited labelled data. This thesis addresses these challenges through two main contributions:
+Automated monitoring of aquatic ecosystems using computer vision is hindered by two interrelated challenges: the geometric imprecision of standard object detection methods when applied to elongated and variably oriented fish, and the prohibitive cost of manual annotation required to train deep learning models. This research addresses both limitations through a synergistic methodology combining **Oriented Bounding Boxes (OBB)** for enhanced localisation with **Active Learning** for annotation efficiency.
 
-1. **OBB vs HBB Analysis**: Comparing the effectiveness of Oriented Bounding Boxes against traditional Horizontal Bounding Boxes for detecting fish at various angles and orientations.
+**Key Results:**
+- OBB consistently outperforms HBB, achieving **10-28% improvements** in mAP@0.5:0.95
+- **Representative Diversity** active learning achieves **93.16%** of full dataset performance using only **19.35%** of samples
+- Translates to an **80% reduction** in annotation effort (~9.7 months saved labour)
 
-2. **Active Learning Pipeline**: Implementing and evaluating multiple active learning strategies to reduce annotation costs while maintaining detection performance.
+## 🎯 Key Findings
 
-### Key Features
+### 1. Oriented Bounding Box Superiority
+- OBB provides **10-28%** improvement in mAP@0.5:0.95 across all datasets
+- Performance gains most pronounced in dense aggregations and camouflage scenarios
+- YOLOv12x-OBB emerges as optimal architecture
+- Negligible computational overhead (<1ms additional latency)
 
-- Comprehensive comparison of YOLO architectures (v8, v9, v10, v11, v12) with both OBB and HBB heads
-- Feature extraction and clustering-based active learning
-- Multiple selection strategies: Random, Uncertainty-based, Cluster-proportional, and Diversity-based
-- Reproducible experiment pipelines with caching support
+### 2. Active Learning Validation
+- **Representative Diversity** (HDBSCAN clustering) identified as most effective strategy
+- Achieves 93.16% of full dataset performance with only 19.35% of samples
+- **Pure Uncertainty sampling unsuitable** for marine environments due to noise sensitivity
+- Dynamic feature layer selection improves clustering quality across iterations
+
+### 3. Architecture Insights
+- YOLOv12x Area Attention mechanism particularly suited for partial occlusions
+- Larger models benefit more from diversity-based sampling
+- Extended training beneficial for OBB (sustained learning to Epoch 688 vs 369 for HBB)
 
 ## 📁 Repository Structure
 
 ```
-├── OBB_vs_HBB_Comparison.ipynb    # OBB vs HBB experiment notebook
-├── Active_Learning_Experiment.ipynb # Active learning pipeline notebook
-├── data.yaml                       # Dataset configuration
-├── README.md                       # This file
-└── requirements.txt                # Python dependencies
+├── notebooks/
+│   ├── OBB_vs_HBB_Comparison.ipynb    # Experiment 1: Bounding box comparison
+│   └── Active_Learning_Experiment.ipynb # Experiment 2: Active learning pipeline
+├── data.yaml                           # Dataset configuration template
+├── requirements.txt                    # Python dependencies
+└── README.md                           # This file
 ```
 
 ## 🛠️ Installation
@@ -50,27 +68,22 @@ Underwater fish detection presents unique challenges due to varying orientations
 ### Prerequisites
 
 - Python 3.10+
-- CUDA-capable GPU (recommended: NVIDIA RTX series with 24GB+ VRAM)
+- CUDA-capable GPU (tested on NVIDIA RTX 6000 Ada, 48GB VRAM)
 - CUDA 12.x
 
 ### Setup
 
-1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/underwater-fish-detection.git
-cd underwater-fish-detection
-```
+# Clone the repository
+git clone https://github.com/yourusername/fish-detection-obb-al.git
+cd fish-detection-obb-al
 
-2. Create and activate a virtual environment:
-```bash
+# Create virtual environment
 python -m venv venv
 source venv/bin/activate  # Linux/Mac
-# or
-venv\Scripts\activate     # Windows
-```
+# or: venv\Scripts\activate  # Windows
 
-3. Install dependencies:
-```bash
+# Install dependencies
 pip install -r requirements.txt
 ```
 
@@ -88,140 +101,23 @@ scikit-learn>=1.3.0
 opencv-python>=4.8.0
 tqdm>=4.65.0
 hdbscan>=0.8.33
+scipy>=1.11.0
 ```
 
-## 🧪 Experiments
+## 📊 Datasets
 
-### 1. OBB vs HBB Comparison
+Four novel datasets curated from African aquatic ecosystems in collaboration with the **South African Institute for Aquatic Biodiversity (SAIAB)**:
 
-**Notebook**: `OBB_vs_HBB_Comparison.ipynb`
+| Dataset | Location | Images | Annotations | Acquisition | Challenges |
+|---------|----------|--------|-------------|-------------|------------|
+| **Aldabra Atoll** | Seychelles | 1,910 | 11,800 | SCUBA Diver | Complex coral backgrounds, camouflage, motion blur |
+| **Lake Tanganyika** | Tanzania | 2,510 | 40,944 | BRUVs | High-density schooling, 250+ endemic cichlid species |
+| **Pondoland MPA** | South Africa | 4,002 | 43,264 | BRUVs | Turbidity, dense aggregations, temperate conditions |
+| **Protea Banks MPA** | South Africa | 3,980 | 33,386 | BRUVs | Pelagic environment, variable lighting |
 
-This experiment compares the performance of Oriented Bounding Box detection against Horizontal Bounding Box detection for underwater fish detection.
+**Total: 12,402 images with 129,394 annotations**
 
-#### Methodology
-
-- **Models Tested**: YOLOv8, YOLOv9, YOLOv10, YOLOv11, YOLOv12
-- **Detection Heads**: Standard (HBB) and Oriented (OBB)
-- **Image Size**: 1024×1024
-- **Metrics**: mAP@0.5, mAP@0.5:0.95, Precision, Recall
-
-#### Running the Experiment
-
-```python
-from ultralytics import YOLO
-
-# Train OBB model
-model = YOLO('yolo12x-obb.yaml')
-model.load('yolo12x.pt')
-results = model.train(data='data.yaml', imgsz=1024, batch=8, epochs=300)
-
-# Evaluate
-metrics = model.val(data='data.yaml', split='test')
-```
-
-### 2. Active Learning
-
-**Notebook**: `Active_Learning_Experiment.ipynb`
-
-This experiment implements an active learning pipeline to efficiently select the most informative samples for labelling.
-
-#### Workflow
-
-```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   Part 1:       │     │   Part 2:       │     │   Part 3:       │     │   Part 4:       │
-│   Layer         │────▶│   Clustering    │────▶│   Selection     │────▶│   Training &    │
-│   Analysis      │     │   & Viz         │     │   Strategies    │     │   Evaluation    │
-└─────────────────┘     └─────────────────┘     └─────────────────┘     └─────────────────┘
-```
-
-#### Selection Strategies
-
-| Strategy | Description |
-|----------|-------------|
-| **Random** | Baseline random sampling |
-| **Pure Uncertainty** | Selects samples with lowest model confidence |
-| **Cluster Uncertainty** | Proportionally selects uncertain samples from each cluster |
-| **Typical Diversity** | Selects samples closest to cluster centroids |
-
-#### Running the Pipeline
-
-```python
-# Configure
-class Config:
-    MODEL_PATH = "path/to/model/weights/best.pt"
-    IMAGE_DIR = "path/to/unlabeled/pool/images"
-    N_IMAGES_TO_SELECT = 200
-    KMEANS_N_CLUSTERS = 30
-
-# Extract features and cluster
-features_scaled, labels, centroids = perform_clustering_analysis(features, n_clusters=30)
-
-# Apply selection strategy
-selection_results = apply_selection_strategies(
-    features_scaled, labels, centroids, confidences, n_select=200
-)
-
-# Export selected samples
-export_selected_dataset(image_paths, selection_results['Typical Diversity'], label_dir, output_dir)
-```
-
-## 📊 Results
-
-### OBB vs HBB Comparison
-
-| Model | Type | mAP@0.5 | mAP@0.5:0.95 | Precision | Recall |
-|-------|------|---------|--------------|-----------|--------|
-| YOLOv12x | HBB | - | - | - | - |
-| YOLOv12x | OBB | - | - | - | - |
-
-*Results to be filled after experiments*
-
-### Active Learning Performance
-
-| Iteration | Training Samples | Strategy | mAP@0.5 | mAP@0.5:0.95 |
-|-----------|------------------|----------|---------|--------------|
-| 0 | 200 | Initial | - | - |
-| 1 | 400 | Typical Diversity | - | - |
-| 2 | 600 | Typical Diversity | - | - |
-
-*Results to be filled after experiments*
-
-## 🚀 Usage
-
-### Training a Model
-
-```python
-from ultralytics import YOLO
-
-# OBB Detection
-model = YOLO('yolo12x-obb.yaml')
-model.load('yolo12x.pt')
-model.train(data='data.yaml', imgsz=1024, batch=8, epochs=300)
-
-# HBB Detection
-model = YOLO('yolo12x.pt')
-model.train(data='data.yaml', imgsz=1024, batch=8, epochs=300)
-```
-
-### Evaluating a Model
-
-```python
-model = YOLO('runs/obb/train/weights/best.pt')
-metrics = model.val(data='data.yaml', split='test', imgsz=1024)
-
-print(f"mAP@0.5: {metrics.box.map50:.3f}")
-print(f"mAP@0.5:0.95: {metrics.box.map:.3f}")
-```
-
-### Running Inference
-
-```python
-model = YOLO('runs/obb/train/weights/best.pt')
-results = model.predict(source='path/to/images', conf=0.25, save=True)
-```
-
-## 📝 Dataset Structure
+### Dataset Structure
 
 ```
 datasets/
@@ -237,35 +133,156 @@ datasets/
 └── data.yaml
 ```
 
-### Label Format
+### Label Formats
 
-**OBB Format** (8 coordinates):
+**OBB Format** (8 normalised coordinates - polygon corners):
 ```
 class_id x1 y1 x2 y2 x3 y3 x4 y4
 ```
 
-**HBB Format** (4 coordinates):
+**HBB Format** (YOLO standard):
 ```
 class_id x_center y_center width height
 ```
 
+## 🧪 Experiments
+
+### Experiment 1: OBB vs HBB Comparison
+
+**Notebook**: `OBB_vs_HBB_Comparison.ipynb`
+
+Comprehensive evaluation of Oriented vs Horizontal Bounding Boxes across YOLO architectures (v9, v10, v11, v12).
+
+**Configuration:**
+- Image size: 1024×1024
+- Epochs: 1500 (early stopping patience: 100)
+- Optimizer: AdamW (auto)
+- Batch size: 8 (large models) / 16 (small models)
+
+### Experiment 2: Active Learning
+
+**Notebook**: `Active_Learning_Experiment.ipynb`
+
+Evaluation of four query strategies for efficient sample selection:
+
+| Strategy | Type | Description |
+|----------|------|-------------|
+| **Random** | Baseline | Uniform random sampling |
+| **Pure Uncertainty** | Exploitation | Selects lowest confidence samples |
+| **Clustered Uncertainty** | Hybrid | Uncertain samples within HDBSCAN clusters |
+| **Representative Diversity** | Exploration | Samples nearest to cluster centroids |
+
+**Active Learning Configuration:**
+- Initial pool: 200 images
+- Selection per iteration: 200 images
+- Epochs per iteration: 300
+- HDBSCAN: min_cluster_size=15, min_samples=10
+
+## 📈 Results
+
+### OBB vs HBB Performance (YOLOv12x)
+
+| Dataset | Method | mAP@0.5:0.95 | mAP@0.5 | mAP@0.75 | Precision | Recall |
+|---------|--------|--------------|---------|----------|-----------|--------|
+| Aldabra | HBB | 51.5% | 79.8% | 58.6% | 79.5% | 71.7% |
+| Aldabra | **OBB** | **66.4%** | **86.4%** | **77.4%** | **84.1%** | **77.3%** |
+| Tanganyika | HBB | 71.0% | 96.2% | 78.5% | 93.7% | 91.9% |
+| Tanganyika | **OBB** | **81.2%** | **98.3%** | **92.2%** | **94.4%** | **95.9%** |
+| Pondoland | HBB | 67.4% | 94.2% | 74.5% | 92.1% | 89.3% |
+| Pondoland | **OBB** | **79.0%** | **97.4%** | **90.7%** | **95.7%** | **92.5%** |
+| Protea Banks | HBB | 68.2% | 94.8% | 75.8% | 91.8% | 90.1% |
+| Protea Banks | **OBB** | **80.7%** | **97.4%** | **91.9%** | **95.1%** | **92.9%** |
+
+### Active Learning Performance
+
+| Strategy | Final mAP@0.5:0.95 | % of Full Dataset | Samples Used |
+|----------|-------------------|-------------------|--------------|
+| Full Dataset | 79.0% | 100% | 12,402 |
+| **Representative Diversity** | **73.6%** | **93.16%** | **2,400 (19.35%)** |
+| Clustered Uncertainty | 72.8% | 92.15% | 2,400 |
+| Random | 70.2% | 88.86% | 2,400 |
+| Pure Uncertainty | 68.4% | 86.58% | 2,400 |
+
+## 🚀 Usage
+
+### Training an OBB Model
+
+```python
+from ultralytics import YOLO
+
+# Load architecture and pretrained weights
+model = YOLO('yolo12x-obb.yaml')
+model.load('yolo12x.pt')
+
+# Train
+results = model.train(
+    data='data.yaml',
+    imgsz=1024,
+    batch=8,
+    epochs=1500,
+    patience=100,
+    optimizer='auto'
+)
+```
+
+### Evaluation
+
+```python
+model = YOLO('runs/obb/train/weights/best.pt')
+metrics = model.val(
+    data='data.yaml',
+    split='test',
+    imgsz=1024,
+    save_json=True
+)
+
+print(f"mAP@0.5:0.95: {metrics.box.map:.3f}")
+print(f"mAP@0.5: {metrics.box.map50:.3f}")
+print(f"Precision: {metrics.box.p[0]:.3f}")
+print(f"Recall: {metrics.box.r[0]:.3f}")
+```
+
+### Active Learning Selection
+
+```python
+from sklearn.cluster import HDBSCAN
+import numpy as np
+
+# Extract features from model neck layer
+features = extract_features(model, unlabeled_pool, layer_idx=3)
+
+# Cluster with HDBSCAN
+clusterer = HDBSCAN(min_cluster_size=15, min_samples=10)
+labels = clusterer.fit_predict(features)
+
+# Select representative samples (nearest to centroids)
+selected_indices = []
+for cluster_id in np.unique(labels[labels != -1]):
+    cluster_mask = labels == cluster_id
+    centroid = features[cluster_mask].mean(axis=0)
+    distances = np.linalg.norm(features[cluster_mask] - centroid, axis=1)
+    nearest_idx = np.where(cluster_mask)[0][np.argmin(distances)]
+    selected_indices.append(nearest_idx)
+```
+
 ## 📖 Citation
 
-If you use this code in your research, please cite:
-
 ```bibtex
-@thesis{author2025underwater,
-  title={Object Detection for Underwater Fish Detection: OBB vs HBB Comparison and Active Learning},
-  author={Your Name},
+@mastersthesis{salie2025fish,
+  title={Precise and Efficient Fish Detection Using Oriented Bounding Boxes and Active Learning},
+  author={Salie, Daanyaal},
   year={2025},
-  school={Your University}
+  school={Rhodes University},
+  address={Grahamstown, South Africa}
 }
 ```
 
 ## 🙏 Acknowledgements
 
+- **Supervisor**: Prof. Dane Brown, Rhodes University
+- **Data Provider**: South African Institute for Aquatic Biodiversity (SAIAB)
+- **Funding**: Telkom SA and the Distributed Multimedia CoE at Rhodes University
 - [Ultralytics](https://github.com/ultralytics/ultralytics) for the YOLO implementation
-- [scikit-learn](https://scikit-learn.org/) for clustering algorithms
 - [HDBSCAN](https://github.com/scikit-learn-contrib/hdbscan) for density-based clustering
 
 ## 📄 License
@@ -274,6 +291,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Author**: Your Name  
-**Contact**: your.email@university.edu  
-**Supervisor**: Supervisor Name
+**Author**: Daanyaal Salie  
+**Institution**: Rhodes University  
+**Supervisor**: Prof. Dane Brown  
+**Year**: 2025
