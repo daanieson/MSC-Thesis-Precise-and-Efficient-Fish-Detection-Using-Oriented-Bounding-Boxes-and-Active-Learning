@@ -7,9 +7,9 @@
 
 This repository contains the implementation and experiments for my MSc thesis on automated underwater fish detection. The research addresses two key challenges in aquatic ecosystem monitoring: **geometric imprecision** of standard detection methods for elongated, variably-oriented fish, and the **prohibitive cost** of manual annotation required to train deep learning models.
 
-<p align="center">
+<!-- <p align="center">
   <img src="assets/obb_vs_hbb.png" alt="OBB vs HBB Comparison" width="600"/>
-</p>
+</p> -->
 
 ## 📋 Table of Contents
 
