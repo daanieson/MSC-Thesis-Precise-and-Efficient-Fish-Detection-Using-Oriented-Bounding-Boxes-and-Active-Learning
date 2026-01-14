@@ -7,10 +7,6 @@
 
 This repository contains the implementation and experiments for my MSc thesis on automated underwater fish detection. The research addresses two key challenges in aquatic ecosystem monitoring: **geometric imprecision** of standard detection methods for elongated, variably-oriented fish, and the **prohibitive cost** of manual annotation required to train deep learning models.
 
-<!-- <p align="center">
-  <img src="assets/obb_vs_hbb.png" alt="OBB vs HBB Comparison" width="600"/>
-</p> -->
-
 ## 📋 Table of Contents
 
 - [Abstract](#abstract)
@@ -26,31 +22,34 @@ This repository contains the implementation and experiments for my MSc thesis on
 
 ## 📝 Abstract
 
-Automated monitoring of aquatic ecosystems using computer vision is hindered by two interrelated challenges: the geometric imprecision of standard object detection methods when applied to elongated and variably oriented fish, and the prohibitive cost of manual annotation required to train deep learning models. This research addresses both limitations through a synergistic methodology combining **Oriented Bounding Boxes (OBB)** for enhanced localisation with **Active Learning** for annotation efficiency.
+Automated monitoring of aquatic ecosystems using underwater imagery is hindered by two fundamental limitations: the geometric imprecision of conventional horizontal bounding box detection (HBB) methods and the prohibitively high cost of manual annotation. This research addresses both limitations through the integration of **Oriented Bounding Boxes (OBB)** for enhanced geometric precision and **Active Learning** for efficient annotation.
 
 **Key Results:**
-- OBB consistently outperforms HBB, achieving **10-28% improvements** in mAP@0.5:0.95
-- **Representative Diversity** active learning achieves **93.16%** of full dataset performance using only **19.35%** of samples
-- Translates to an **80% reduction** in annotation effort (~9.7 months saved labour)
+- OBB consistently outperforms HBB, achieving **8.5 to 14.9 percentage point improvements** in mAP@0.5:0.95
+- **Representative Diversity** active learning achieves **93.2%** of full dataset performance using only **27.6%** of training samples
+- Translates to a **72.4% reduction** in annotation effort (~6.1 months saved labour)
 
 ## 🎯 Key Findings
 
 ### 1. Oriented Bounding Box Superiority
-- OBB provides **10-28%** improvement in mAP@0.5:0.95 across all datasets
-- Performance gains most pronounced in dense aggregations and camouflage scenarios
-- YOLOv12x-OBB emerges as optimal architecture
-- Negligible computational overhead (<1ms additional latency)
+- OBB provides **8.5 to 14.9 percentage point** improvement in mAP@0.5:0.95 across all datasets
+- Performance differential widens at stricter thresholds, reaching **18.8 percentage points at mAP@0.75**
+- Recall improvements of **7 to 10 percentage points** indicate HBB systematically underestimates fish abundance
+- YOLOv12x-OBB emerges as optimal architecture, achieving **0.825 mAP@0.5:0.95** on Protea Banks
+- Negligible computational overhead (<0.5ms additional latency)
 
 ### 2. Active Learning Validation
-- **Representative Diversity** (HDBSCAN clustering) identified as most effective strategy
-- Achieves 93.16% of full dataset performance with only 19.35% of samples
-- **Pure Uncertainty sampling unsuitable** for marine environments due to noise sensitivity
+- **Representative Diversity** and **Clustered Uncertainty** identified as equally effective strategies
+- Both achieve **0.736 mAP@0.5:0.95** with only 27.6% of training data (2,400 of 8,681 images)
+- **Pure Uncertainty sampling unsuitable** for marine environments due to aleatoric noise sensitivity
 - Dynamic feature layer selection improves clustering quality across iterations
+- High-capacity models (YOLOv12x) achieve **0.754 mAP@0.5:0.95** under same protocol
 
 ### 3. Architecture Insights
 - YOLOv12x Area Attention mechanism particularly suited for partial occlusions
-- Larger models benefit more from diversity-based sampling
-- Extended training beneficial for OBB (sustained learning to Epoch 688 vs 369 for HBB)
+- Larger models access deep semantic features (block 20) for superior clustering
+- Extended training beneficial for OBB (sustained learning to Epoch 688 vs 73 for HBB on Aldabra)
+- Two-phase workflow recommended: YOLOv12x for annotation prioritisation, YOLOv12s for deployment
 
 ## 📁 Repository Structure
 
@@ -106,16 +105,26 @@ scipy>=1.11.0
 
 ## 📊 Datasets
 
-Four novel datasets curated from African aquatic ecosystems in collaboration with the **South African Institute for Aquatic Biodiversity (SAIAB)**:
+Four datasets curated from African aquatic ecosystems in collaboration with the **South African Institute for Aquatic Biodiversity (SAIAB)**:
 
-| Dataset | Location | Images | Annotations | Acquisition | Challenges |
-|---------|----------|--------|-------------|-------------|------------|
-| **Aldabra Atoll** | Seychelles | 1,910 | 11,800 | SCUBA Diver | Complex coral backgrounds, camouflage, motion blur |
-| **Lake Tanganyika** | Tanzania | 2,510 | 40,944 | BRUVs | High-density schooling, 250+ endemic cichlid species |
-| **Pondoland MPA** | South Africa | 4,002 | 43,264 | BRUVs | Turbidity, dense aggregations, temperate conditions |
-| **Protea Banks MPA** | South Africa | 3,980 | 33,386 | BRUVs | Pelagic environment, variable lighting |
+| Dataset | Location | Images | Instances | Avg. Density | Acquisition | Challenges |
+|---------|----------|--------|-----------|--------------|-------------|------------|
+| **Aldabra Atoll** | Seychelles | 1,910 | 11,800 | 6.2 | SCUBA Diver | Complex coral backgrounds, high species diversity, motion blur |
+| **Lake Tanganyika** | Tanzania | 2,510 | 40,944 | 16.3 | BRUVs | High-density schooling, murky water, rocky substrates |
+| **Pondoland MPA** | South Africa | 4,000 | 21,344 | 5.3 | BRUVs | Turbidity, morphologically similar species, dense aggregations |
+| **Protea Banks** | South Africa | 3,982 | 55,306 | 13.9 | BRUVs | Pelagic environment, frontal approach geometry, variable lighting |
 
-**Total: 12,402 images with 129,394 annotations**
+**Total: 12,402 images with 129,394 annotated instances**
+
+### Dataset Split
+
+| Dataset | Train (70%) | Validation (20%) | Test (10%) |
+|---------|-------------|------------------|------------|
+| Aldabra Atoll | 1,337 | 382 | 191 |
+| Lake Tanganyika | 1,757 | 502 | 251 |
+| Pondoland MPA | 2,800 | 800 | 400 |
+| Protea Banks | 2,787 | 796 | 399 |
+| **Combined** | **8,681** | **2,480** | **1,241** |
 
 ### Dataset Structure
 
@@ -151,7 +160,7 @@ class_id x_center y_center width height
 
 **Notebook**: `OBB_vs_HBB_Comparison.ipynb`
 
-Comprehensive evaluation of Oriented vs Horizontal Bounding Boxes across YOLO architectures (v9, v10, v11, v12).
+Comprehensive evaluation of Oriented vs Horizontal Bounding Boxes across YOLO architectures (v9e, v10x, v11x, v12x).
 
 **Configuration:**
 - Image size: 1024×1024
@@ -173,9 +182,11 @@ Evaluation of four query strategies for efficient sample selection:
 | **Representative Diversity** | Exploration | Samples nearest to cluster centroids |
 
 **Active Learning Configuration:**
-- Initial pool: 200 images
+- Initial pool: 400 images
 - Selection per iteration: 200 images
-- Epochs per iteration: 300
+- Total iterations: 10
+- Total samples: 2,400 (27.6% of training pool)
+- Epochs per iteration: 300 (early stopping patience: 50)
 - HDBSCAN: min_cluster_size=15, min_samples=10
 
 ## 📈 Results
@@ -184,24 +195,39 @@ Evaluation of four query strategies for efficient sample selection:
 
 | Dataset | Method | mAP@0.5:0.95 | mAP@0.5 | mAP@0.75 | Precision | Recall |
 |---------|--------|--------------|---------|----------|-----------|--------|
-| Aldabra | HBB | 51.5% | 79.8% | 58.6% | 79.5% | 71.7% |
-| Aldabra | **OBB** | **66.4%** | **86.4%** | **77.4%** | **84.1%** | **77.3%** |
-| Tanganyika | HBB | 71.0% | 96.2% | 78.5% | 93.7% | 91.9% |
-| Tanganyika | **OBB** | **81.2%** | **98.3%** | **92.2%** | **94.4%** | **95.9%** |
-| Pondoland | HBB | 67.4% | 94.2% | 74.5% | 92.1% | 89.3% |
-| Pondoland | **OBB** | **79.0%** | **97.4%** | **90.7%** | **95.7%** | **92.5%** |
-| Protea Banks | HBB | 68.2% | 94.8% | 75.8% | 91.8% | 90.1% |
-| Protea Banks | **OBB** | **80.7%** | **97.4%** | **91.9%** | **95.1%** | **92.9%** |
+| Aldabra | HBB | 0.515 | 0.798 | 0.586 | 0.795 | 0.717 |
+| Aldabra | **OBB** | **0.664** | **0.864** | **0.774** | **0.841** | **0.773** |
+| Tanganyika | HBB | 0.710 | 0.962 | 0.785 | 0.937 | 0.919 |
+| Tanganyika | **OBB** | **0.812** | **0.983** | **0.922** | **0.944** | **0.959** |
+| Pondoland | HBB | 0.688 | 0.955 | 0.765 | 0.939 | 0.907 |
+| Pondoland | **OBB** | **0.807** | **0.974** | **0.896** | **0.957** | **0.925** |
+| Protea Banks | HBB | 0.740 | 0.940 | 0.802 | 0.947 | 0.886 |
+| Protea Banks | **OBB** | **0.825** | **0.945** | **0.888** | **0.966** | **0.895** |
 
-### Active Learning Performance
+### Active Learning Performance (Representative Diversity)
 
-| Strategy | Final mAP@0.5:0.95 | % of Full Dataset | Samples Used |
-|----------|-------------------|-------------------|--------------|
-| Full Dataset | 79.0% | 100% | 12,402 |
-| **Representative Diversity** | **73.6%** | **93.16%** | **2,400 (19.35%)** |
-| Clustered Uncertainty | 72.8% | 92.15% | 2,400 |
-| Random | 70.2% | 88.86% | 2,400 |
-| Pure Uncertainty | 68.4% | 86.58% | 2,400 |
+| Architecture | Full Dataset | Active Learning (27.6%) | Performance Retained |
+|--------------|--------------|-------------------------|---------------------|
+| YOLOv12s | 0.790 | 0.736 | 93.2% |
+| YOLOv12x | 0.810 | 0.754 | 93.1% |
+
+### Query Strategy Comparison (YOLOv12s)
+
+| Strategy | mAP@0.5:0.95 | mAP@0.5 | mAP@0.75 | Precision | Recall |
+|----------|--------------|---------|----------|-----------|--------|
+| **Representative Diversity** | **0.736** | 0.930 | **0.837** | 0.934 | 0.866 |
+| **Clustered Uncertainty** | **0.736** | 0.925 | 0.834 | **0.940** | 0.859 |
+| Random Sampling | 0.725 | **0.932** | 0.826 | **0.940** | **0.867** |
+| Pure Uncertainty | 0.718 | 0.927 | 0.823 | 0.935 | 0.856 |
+
+### Cost-Benefit Analysis
+
+| Metric | Full Training Set | Active Learning | Savings |
+|--------|-------------------|-----------------|---------|
+| Samples Annotated | 8,681 | 2,400 | 72.4% reduction |
+| Estimated Time | 8.4 months | 2.3 months | 6.1 months saved |
+| mAP@0.5:0.95 (YOLOv12s) | 0.790 | 0.736 | 6.8% reduction |
+| mAP@0.5:0.95 (YOLOv12x) | 0.810 | 0.754 | 6.9% reduction |
 
 ## 🚀 Usage
 
@@ -245,7 +271,7 @@ print(f"Recall: {metrics.box.r[0]:.3f}")
 ### Active Learning Selection
 
 ```python
-from sklearn.cluster import HDBSCAN
+from hdbscan import HDBSCAN
 import numpy as np
 
 # Extract features from model neck layer
